@@ -26,7 +26,7 @@ func New(size uint) *BloomFilter {
 
 // Add item to bloom filter
 func (bf *BloomFilter) Add(item []byte) {
-	hashvalues := bf.hash(item)
+	hashvalues := bf.hashValue(item)
 
 	for i := 0; uint(i) < bf.k; i++ {
 		pos := uint(hashvalues[i]) % bf.m
@@ -37,7 +37,7 @@ func (bf *BloomFilter) Add(item []byte) {
 
 // Contain method check if item in the bloom
 func (bf *BloomFilter) Contain(item []byte) bool {
-	hashvalues := bf.hash(item)
+	hashvalues := bf.hashValue(item)
 
 	for _, v := range hashvalues {
 		pos := uint(v) % bf.m
@@ -48,8 +48,8 @@ func (bf *BloomFilter) Contain(item []byte) bool {
 	return true
 }
 
-// Use k hash func to calc many hash values
-func (bf *BloomFilter) hash(key []byte) (rv []uint64) {
+// Use k hashValue func to calc many hashValue values
+func (bf *BloomFilter) hashValue(key []byte) (rv []uint64) {
 	// TODO: choice better hash functions
 	var hashfuncs = []hash.Hash64{fnv.New64(), fnv.New64(), fnv.New64a()}
 
