@@ -2,11 +2,8 @@
 package bloomfilter
 
 import (
-	"bytes"
-	"crypto/sha1"
-	"encoding/binary"
-	"fmt"
 	"hash"
+	"hash/fnv"
 )
 
 // BloomFilter data strucutre define
@@ -27,31 +24,39 @@ func New(size uint) *BloomFilter {
 	}
 }
 
-var hashfunc = sha1.New()
+// Add item to bloom filter
+func (bf *BloomFilter) Add(item []byte) {
+	hashvalues := bf.hash(item)
 
-func (bf *BloomFilter) add(s string) {
-	index := bf.position(s)
-	bf.bitset[index] = true
-}
-
-func (bf *BloomFilter) query(s string) bool {
-	index := bf.position(s)
-	// fmt.Printf("s: %v, index: %v\n", s, index)
-	fmt.Printf("bf.bits: %v", bf.bitset)
-	return bf.bitset[index]
-}
-
-func (bf *BloomFilter) position(s string) int {
-	hs := hasher(hashfunc, s)
-	if hs < 0 {
-		hs = -hs
+	for i := 0; uint(i) < bf.k; i++ {
+		pos := uint(hashvalues[i]) % bf.m
+		bf.bitset[uint(pos)] = true
 	}
-	return hs % len(bf.bitset)
+	bf.n++
 }
 
-func hasher(h hash.Hash, s string) int {
-	bits := h.Sum([]byte(s))
-	buffer := bytes.NewBuffer(bits)
-	result, _ := binary.ReadVarint(buffer)
-	return int(result)
+// Contain method check if item in the bloom
+func (bf *BloomFilter) Contain(item []byte) bool {
+	hashvalues := bf.hash(item)
+
+	for _, v := range hashvalues {
+		pos := uint(v) % bf.m
+		if bf.bitset[pos] == false {
+			return false
+		}
+	}
+	return true
+}
+
+// Use k hash func to calc many hash values
+func (bf *BloomFilter) hash(key []byte) (rv []uint64) {
+	// TODO: choice better hash functions
+	var hashfuncs = []hash.Hash64{fnv.New64(), fnv.New64(), fnv.New64a()}
+
+	for _, hashfunc := range hashfuncs {
+		hashfunc.Write(key)
+		rv = append(rv, hashfunc.Sum64())
+		hashfunc.Reset()
+	}
+	return
 }
